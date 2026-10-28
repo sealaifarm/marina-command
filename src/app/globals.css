@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/*
+  Marina Command design tokens
+  Warm off-white background, white surfaces, charcoal text, #7665E8 accent.
+*/
+:root {
+  --background: #faf8f5;
+  --foreground: #2a2a2f;
+  --card: #ffffff;
+  --card-foreground: #2a2a2f;
+  --muted: #efebe4;
+  --muted-foreground: #6e6e78;
+  --border: #e9e5df;
+  --input: #e2ddd5;
+  --primary: #7665e8;
+  --primary-foreground: #ffffff;
+  --ring: #7665e8;
+  --destructive: #b42318;
+  --radius: 1.25rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: var(--radius);
+
+  --shadow-soft: 0 1px 2px rgb(42 42 47 / 0.04), 0 8px 24px rgb(42 42 47 / 0.06);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
