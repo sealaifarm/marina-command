@@ -9,7 +9,8 @@ A modern marina management CRM for Golden Tide Marina.
 
 - Step 1: Supabase database for Spaces → Marina Map (`supabase/`)
 - Step 2: Login page and route protection
-- Step 3: Sidebar and top bar (this step)
+- Step 3: Sidebar and top bar
+- Step 4: Marina Map at `/spaces/marina-map` (this step)
 
 Signed-out visitors can only see `/login`. Everything else requires a signed-in user.
 
@@ -21,8 +22,9 @@ src/lib/supabase/             Supabase helpers (env, server client, session refr
 src/app/login/                login page, form and sign-in action
 src/app/(app)/                protected pages (home, Spaces → Marina Map, Leads, Storage)
 src/components/app-shell/     sidebar, top bar, marina selector, tooltip
+src/components/marina-map/    draws a marina's docks and slips from database rows
 src/components/ui/            shadcn-style Button, Input, Label
-supabase/                     migrations and seed
+supabase/                     migrations, seed, and optional demo marina
 ```
 
 ## Configure
@@ -111,3 +113,17 @@ To change the database later, add a new file in `supabase/migrations/` with a la
 ## Design
 
 Warm off-white backgrounds, white surfaces, charcoal text, Montserrat, and `#7665E8` as the accent (primary buttons, active navigation, meaningful highlights). Generous whitespace, subtle borders, soft shadows, rounded cards, pill-shaped inputs and buttons. No gradients. The design tokens live in `src/app/globals.css`.
+
+## Marina Map
+
+`/spaces/marina-map` draws the marina chosen in the sidebar, entirely from the database:
+
+- canvas size from `map_layouts` (if a marina has no layout row, the canvas is fitted around its docks and slips)
+- docks from `docks`, slips from `slips`, both placed with `map_x`, `map_y`, `length`, `width`, `rotation`
+- slip color from `slips.status`: available green, occupied blue, reserved yellow, maintenance red
+
+Nothing is specific to one marina, so a marina with different docks, slip sizes or rotations simply draws differently. Hover a slip for its name, size and status. Colors are defined in one list at the top of `src/components/marina-map/marina-map.tsx`.
+
+No new tables or migrations are needed. To see a second layout, optionally run `supabase/seed_demo_second_marina.sql` once in the SQL Editor (after `seed.sql`), then switch marinas in the sidebar.
+
+Test it: open `/spaces/marina-map` and check Golden Tide shows docks A, B and C (44 slips, colored by status); in Supabase change one slip's `status`, refresh, and see its color change; run the optional demo SQL, switch to Harbor Point Marina, and see a different layout.
