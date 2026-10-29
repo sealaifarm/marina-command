@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AnchorIcon } from "@/components/icons";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
@@ -20,14 +19,13 @@ export default function LoginPage() {
 
       <section className="flex flex-1 items-center justify-center px-6 py-12 sm:px-10">
         <div className="w-full max-w-sm">
-          <div className="mb-12 flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <AnchorIcon />
-            </span>
-            <span className="text-lg font-semibold tracking-tight">
-              Marina Command
-            </span>
-          </div>
+          {/* Your logo: public/logo.png */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Marina Command"
+            className="mb-12 h-12 w-auto max-w-full"
+          />
 
           <h1 className="text-3xl font-semibold tracking-tight">Welcome back</h1>
           <p className="mb-10 mt-3 text-muted-foreground">

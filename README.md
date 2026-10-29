@@ -8,16 +8,19 @@ A modern marina management CRM for Golden Tide Marina.
 ## Current state
 
 - Step 1: Supabase database for Spaces → Marina Map (`supabase/`)
-- Step 2: Login page and route protection (this step)
+- Step 2: Login page and route protection
+- Step 3: Sidebar and top bar (this step)
 
 Signed-out visitors can only see `/login`. Everything else requires a signed-in user.
 
 ```
 public/login-hero.webp        marina photo for the login page (you provide this)
+public/logo.png               your logo, used on the login page and at the top of the sidebar (you provide this)
 src/proxy.ts                  runs on every page request: refreshes the session, redirects
 src/lib/supabase/             Supabase helpers (env, server client, session refresh)
 src/app/login/                login page, form and sign-in action
-src/app/(app)/                protected pages (header with Sign out, home page)
+src/app/(app)/                protected pages (home, Spaces → Marina Map, Leads, Storage)
+src/components/app-shell/     sidebar, top bar, marina selector, tooltip
 src/components/ui/            shadcn-style Button, Input, Label
 supabase/                     migrations and seed
 ```
@@ -37,9 +40,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
 
 On **Vercel**, add the same two variables under **Project Settings → Environment Variables** (Production and Preview), then redeploy. If you connected Supabase through the Vercel integration, they may already be there.
 
-### 2. Marina photo
+### 2. Logo and marina photo
 
-Put your image at `public/login-hero.webp`. Until it's there, the left side of the login page shows a plain warm panel.
+Put your logo at `public/logo.png`. It appears on the login page and at the top of the sidebar. In the collapsed sidebar only the left 40px of the logo shows, so a logo that starts with a square mark works best.
+
+
+Put your photo at `public/login-hero.webp`. Until it's there, the left side of the login page shows a plain warm panel.
 
 ### 3. A user to sign in with
 
@@ -74,6 +80,14 @@ Open http://localhost:3000.
 4. Sign in with the correct details. The button shows "Signing in…", then you land on the home page with your email in the header.
 5. While signed in, open `/login`. You should be sent back to `/`.
 6. Click **Sign out**. You return to `/login`, and `/` is protected again.
+
+## Sidebar
+
+- **Collapse:** the round button on the sidebar edge (desktop) switches between the full sidebar and an icon-only rail. The choice is saved in a cookie, so it is remembered and there is no flash on reload.
+- **Mobile:** the sidebar becomes a drawer opened from the top bar. It always shows full labels.
+- **Marina selector:** below the logo. It lists the marinas the signed-in user can access and remembers the choice (cookie `mc_marina`). It works in the rail too: click the pin icon.
+- **Spaces:** expands to Marina Map. In the rail, the Spaces icon goes straight to Marina Map.
+- **Add a page:** add a link in `src/components/app-shell/sidebar.tsx` and a title in `src/components/app-shell/nav.ts`.
 
 ## Database
 

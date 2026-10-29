@@ -20,6 +20,18 @@
   --radius: 1.25rem;
 }
 
+/*
+  "rail:" applies a utility only on desktop (lg+) while the sidebar is collapsed.
+  Put data-collapsed on an ancestor (see app-shell.tsx).
+*/
+@custom-variant rail {
+  @media (min-width: 64rem) {
+    &:where([data-collapsed="true"], [data-collapsed="true"] *) {
+      @slot;
+    }
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -37,6 +49,19 @@
   --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
 
   --radius-card: var(--radius);
+
+  --animate-tooltip-in: tooltip-in 140ms ease-out;
+
+  @keyframes tooltip-in {
+    from {
+      opacity: 0;
+      transform: translate(-4px, -50%);
+    }
+    to {
+      opacity: 1;
+      transform: translate(0, -50%);
+    }
+  }
 
   --shadow-soft: 0 1px 2px rgb(42 42 47 / 0.04), 0 8px 24px rgb(42 42 47 / 0.06);
 }
