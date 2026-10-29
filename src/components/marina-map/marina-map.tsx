@@ -93,6 +93,46 @@ function getViewBox(layout: MapLayout | null, docks: MapDock[], slips: MapSlip[]
   };
 }
 
+// The "T head": a crossbar across the shore end of a dock, a little wider than
+// the slips on either side of it. It is worked out from the dock's own slips, so
+// it fits whatever layout the marina has. Measured in the dock's own frame:
+// "along" runs down the dock from its start, "across" runs side to side.
+function getTHead(dock: MapDock, dockSlips: MapSlip[]) {
+  if (dockSlips.length === 0) return null;
+
+  const r = (dock.rotation * Math.PI) / 180;
+  const cos = Math.cos(r);
+  const sin = Math.sin(r);
+
+  let nearestSlip = Infinity; // where the first slip begins along the dock
+  let minAcross = -dock.width / 2;
+  let maxAcross = dock.width / 2;
+  for (const slip of dockSlips) {
+    const dx = slip.map_x - dock.map_x;
+    const dy = slip.map_y - dock.map_y;
+    const along = dx * cos + dy * sin;
+    const across = -dx * sin + dy * cos;
+    const rel = ((slip.rotation - dock.rotation) * Math.PI) / 180;
+    const halfAlong = (Math.abs(Math.cos(rel)) * slip.length + Math.abs(Math.sin(rel)) * slip.width) / 2;
+    const halfAcross = (Math.abs(Math.sin(rel)) * slip.length + Math.abs(Math.cos(rel)) * slip.width) / 2;
+    nearestSlip = Math.min(nearestSlip, along - halfAlong);
+    minAcross = Math.min(minAcross, across - halfAcross);
+    maxAcross = Math.max(maxAcross, across + halfAcross);
+  }
+
+  const thickness = Math.max(dock.width * 0.7, 3);
+  const start = -dock.length / 2;
+  // flush with the dock's start, but never touching the first slip
+  const center = Math.min(start + thickness / 2, nearestSlip - 3 - thickness / 2);
+  const overhang = 2.5;
+  return {
+    x: center - thickness / 2,
+    y: minAcross - overhang,
+    width: thickness,
+    height: maxAcross - minAcross + overhang * 2,
+  };
+}
+
 // Badge size for a dock's name: a rounded label that grows with the name.
 function badgeSize(dock: MapDock) {
   const height = Math.max(dock.width * 1.3, 8);
@@ -124,6 +164,13 @@ export function MarinaMap({
 }) {
   const counts = new Map<string, number>();
   for (const slip of slips) counts.set(slip.status, (counts.get(slip.status) ?? 0) + 1);
+
+  const slipsByDock = new Map<string, MapSlip[]>();
+  for (const slip of slips) {
+    const list = slipsByDock.get(slip.dock_id);
+    if (list) list.push(slip);
+    else slipsByDock.set(slip.dock_id, [slip]);
+  }
 
   const isEmpty = docks.length === 0 && slips.length === 0;
   const view = isEmpty ? null : getViewBox(layout, docks, slips);
@@ -158,18 +205,25 @@ export function MarinaMap({
               minWidth: Math.min(view.w * 3, 520),
             }}
           >
-            {docks.map((dock) => (
-              <rect
-                key={dock.id}
-                x={dock.map_x - dock.length / 2}
-                y={dock.map_y - dock.width / 2}
-                width={dock.length}
-                height={dock.width}
-                rx={Math.min(dock.width, dock.length) * 0.2}
-                fill="#8f8f98"
-                transform={`rotate(${dock.rotation} ${dock.map_x} ${dock.map_y})`}
-              />
-            ))}
+            {docks.map((dock) => {
+              const head = getTHead(dock, slipsByDock.get(dock.id) ?? []);
+              return (
+                <g
+                  key={dock.id}
+                  fill="#8f8f98"
+                  transform={`translate(${dock.map_x} ${dock.map_y}) rotate(${dock.rotation})`}
+                >
+                  <rect
+                    x={-dock.length / 2}
+                    y={-dock.width / 2}
+                    width={dock.length}
+                    height={dock.width}
+                    rx={Math.min(dock.width, dock.length) * 0.2}
+                  />
+                  {head && <rect {...head} rx={head.width * 0.3} />}
+                </g>
+              );
+            })}
 
             {slips.map((slip) => {
               const style = statusStyle(slip.status);
@@ -177,6 +231,7 @@ export function MarinaMap({
               return (
                 <g
                   key={slip.id}
+                  className="cursor-pointer transition-opacity hover:opacity-80"
                   transform={`rotate(${slip.rotation} ${slip.map_x} ${slip.map_y})`}
                 >
                   <title>{`${slip.name} · ${slip.length} × ${slip.width} ft · ${style.label}`}</title>

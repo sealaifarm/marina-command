@@ -124,6 +124,6 @@ Warm off-white backgrounds, white surfaces, charcoal text, Montserrat, and `#766
 
 Nothing is specific to one marina, so a marina with different docks, slip sizes or rotations simply draws differently. Hover a slip for its name, size and status. Colors are defined in one list at the top of `src/components/marina-map/marina-map.tsx`.
 
-No new tables or migrations are needed. To see a second layout, optionally run `supabase/seed_demo_second_marina.sql` once in the SQL Editor (after `seed.sql`), then switch marinas in the sidebar.
+No new tables or migrations are needed. Each dock's T head is drawn automatically across the shore end of the dock, sized to the slips beside it. If you ran an earlier `seed.sql`, run `supabase/update_golden_tide_layout.sql` once to switch Golden Tide to the current layout (three identical docks, 24 slips each); it replaces that marina's docks and slips. To see a second layout, optionally run `supabase/seed_demo_second_marina.sql` once in the SQL Editor (after `seed.sql`), then switch marinas in the sidebar.
 
-Test it: open `/spaces/marina-map` and check Golden Tide shows docks A, B and C (44 slips, colored by status); in Supabase change one slip's `status`, refresh, and see its color change; run the optional demo SQL, switch to Harbor Point Marina, and see a different layout.
+Test it: open `/spaces/marina-map` and check Golden Tide shows docks A, B and C, each with a T head and 24 slips (72 slips, colored by status); in Supabase change one slip's `status`, refresh, and see its color change; run the optional demo SQL, switch to Harbor Point Marina, and see a different layout.
