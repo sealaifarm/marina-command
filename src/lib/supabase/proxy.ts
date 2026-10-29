@@ -32,9 +32,13 @@ export async function updateSession(request: NextRequest) {
       },
     });
 
-    // getUser() checks the session with Supabase, so it can't be faked with a cookie.
-    const { data } = await supabase.auth.getUser();
-    signedIn = Boolean(data.user);
+    // getClaims() verifies the session token's signature, so it can't be faked
+    // with a cookie. With Supabase's asymmetric JWT signing keys the check runs
+    // locally (no network call), which matters because this runs on every page
+    // request and every link prefetch. With the legacy shared secret it falls
+    // back to asking Supabase Auth, so it is never slower than getUser().
+    const { data } = await supabase.auth.getClaims();
+    signedIn = Boolean(data?.claims);
   } catch {
     // Missing env vars or Supabase unreachable: treat the visitor as signed out.
     signedIn = false;

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell/app-shell";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, getMarinas } from "@/lib/supabase/session";
 import { MARINA_COOKIE, SIDEBAR_COOKIE } from "@/lib/preferences";
 
 // Every page inside this folder requires a signed-in user.
@@ -9,20 +9,18 @@ import { MARINA_COOKIE, SIDEBAR_COOKIE } from "@/lib/preferences";
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // These lookups don't depend on each other, so run them together instead of
+  // one after another.
+  const [user, marinas, cookieStore] = await Promise.all([
+    getCurrentUser(),
+    getMarinas(),
+    cookies(),
+  ]);
 
   if (!user) {
     redirect("/login");
   }
 
-  // Marinas this user can access (row level security does the filtering).
-  const { data } = await supabase.from("marinas").select("id, name").order("name");
-  const marinas = data ?? [];
-
-  const cookieStore = await cookies();
   const savedMarina = cookieStore.get(MARINA_COOKIE)?.value;
   const selectedMarinaId =
     marinas.find((marina) => marina.id === savedMarina)?.id ?? marinas[0]?.id ?? null;
@@ -30,7 +28,7 @@ export default async function AppLayout({
 
   return (
     <AppShell
-      email={user.email ?? ""}
+      email={user.email}
       marinas={marinas}
       selectedMarinaId={selectedMarinaId}
       initialCollapsed={initialCollapsed}
