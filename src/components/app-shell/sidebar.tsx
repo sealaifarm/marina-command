@@ -192,6 +192,18 @@ export function Sidebar({
                     >
                       Marina Map
                     </Link>
+                    <Link
+                      href="/spaces/dockwalks"
+                      onClick={onCloseMobile}
+                      aria-current={isActive("/spaces/dockwalks") ? "page" : undefined}
+                      className={cn(
+                        itemBase,
+                        "mt-1 h-10 pl-12",
+                        isActive("/spaces/dockwalks") && itemActive
+                      )}
+                    >
+                      Dockwalks
+                    </Link>
                   </div>
                 </div>
               </div>

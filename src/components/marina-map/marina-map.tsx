@@ -1,5 +1,11 @@
-// Draws a marina from database rows. Pure rendering: no data fetching and no
-// client-side JavaScript, so it can be used from any Server Component.
+"use client";
+
+import { useEffect, useState } from "react";
+import { SlipPanel } from "./slip-panel";
+import { STATUSES, statusStyle } from "./statuses";
+
+// Draws a marina from database rows and lets you click a slip to see its details.
+// No data fetching here: the page loads the rows and passes them in.
 //
 // Everything on screen comes from the rows it is given:
 //   - canvas size   -> map_layouts (width x height, in feet)
@@ -20,6 +26,16 @@ export type MapDock = {
   rotation: number;
 };
 
+export type MapBoat = {
+  name: string;
+  type: string | null;
+  length: number | null;
+  registration: string | null;
+  owner_name: string;
+  owner_phone: string | null;
+  owner_email: string | null;
+};
+
 export type MapSlip = {
   id: string;
   dock_id: string;
@@ -30,22 +46,8 @@ export type MapSlip = {
   map_x: number;
   map_y: number;
   rotation: number;
+  boat: MapBoat | null;
 };
-
-// Slip colors by status. Set in one place so the legend and the map always agree.
-const STATUSES = [
-  { key: "available", label: "Available", fill: "#43D395", text: "#10372A" },
-  { key: "occupied", label: "Occupied", fill: "#2F7DF6", text: "#FFFFFF" },
-  { key: "reserved", label: "Reserved", fill: "#FBD05B", text: "#3D3006" },
-  { key: "maintenance", label: "Maintenance", fill: "#E5484D", text: "#FFFFFF" },
-] as const;
-
-// Used if a slip ever has a status this list doesn't know about.
-const UNKNOWN_STATUS = { key: "unknown", label: "Unknown", fill: "#FFFFFF", text: "#2A2A2F" };
-
-function statusStyle(status: string) {
-  return STATUSES.find((s) => s.key === status) ?? UNKNOWN_STATUS;
-}
 
 const PADDING = 12; // feet of breathing room when we have to work out the canvas ourselves
 
@@ -162,6 +164,22 @@ export function MarinaMap({
   docks: MapDock[];
   slips: MapSlip[];
 }) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Escape closes the details panel
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedId(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [selectedId]);
+
+  // If the marina is switched (or the slip is deleted) the selection simply disappears.
+  const selectedSlip = slips.find((slip) => slip.id === selectedId) ?? null;
+  const selectedDock = selectedSlip ? docks.find((dock) => dock.id === selectedSlip.dock_id) : null;
+
   const counts = new Map<string, number>();
   for (const slip of slips) counts.set(slip.status, (counts.get(slip.status) ?? 0) + 1);
 
@@ -176,7 +194,12 @@ export function MarinaMap({
   const view = isEmpty ? null : getViewBox(layout, docks, slips);
 
   return (
-    <div>
+    <div
+      className={
+        selectedSlip ? "lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start lg:gap-6" : undefined
+      }
+    >
+      <div className="min-w-0">
       {/* Legend: also the status totals */}
       <ul className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
         {STATUSES.map((s) => (
@@ -195,8 +218,9 @@ export function MarinaMap({
       <div className="mt-5 overflow-x-auto rounded-card border bg-card p-3 shadow-soft md:p-5">
         {view ? (
           <svg
-            role="img"
+            role="group"
             aria-label={`Map of ${marinaName}: ${docks.length} docks, ${slips.length} slips`}
+            onClick={() => setSelectedId(null)}
             viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
             className="mx-auto block h-auto rounded-2xl bg-[#e4f2fb]"
             style={{
@@ -231,8 +255,22 @@ export function MarinaMap({
               return (
                 <g
                   key={slip.id}
-                  className="cursor-pointer transition-opacity hover:opacity-80"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Slip ${slip.name}, ${style.label}`}
+                  aria-pressed={slip.id === selectedId}
+                  className="group cursor-pointer outline-none transition-opacity hover:opacity-80"
                   transform={`rotate(${slip.rotation} ${slip.map_x} ${slip.map_y})`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSelectedId(slip.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedId(slip.id);
+                    }
+                  }}
                 >
                   <title>{`${slip.name} · ${slip.length} × ${slip.width} ft · ${style.label}`}</title>
                   <rect
@@ -245,13 +283,14 @@ export function MarinaMap({
                     stroke="#2a2a2f"
                     strokeOpacity={0.12}
                     strokeWidth={0.3}
+                    className="group-focus-visible:[stroke-opacity:1] group-focus-visible:[stroke-width:1.2px] group-focus-visible:[stroke:#2a2a2f]"
                   />
                   <text
                     x={slip.map_x}
                     y={slip.map_y}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fontSize={Math.max(small * 0.4, 2)}
+                    fontSize={Math.max(small * 0.48, 2)}
                     fontWeight={600}
                     fill={style.text}
                     style={{ pointerEvents: "none" }}
@@ -261,6 +300,23 @@ export function MarinaMap({
                 </g>
               );
             })}
+
+            {/* Selected slip: a charcoal outline drawn over everything else */}
+            {selectedSlip && (
+              <rect
+                data-testid="selected-slip-outline"
+                x={selectedSlip.map_x - selectedSlip.length / 2}
+                y={selectedSlip.map_y - selectedSlip.width / 2}
+                width={selectedSlip.length}
+                height={selectedSlip.width}
+                rx={Math.min(selectedSlip.length, selectedSlip.width) * 0.2}
+                fill="none"
+                stroke="#2a2a2f"
+                strokeWidth={1.3}
+                transform={`rotate(${selectedSlip.rotation} ${selectedSlip.map_x} ${selectedSlip.map_y})`}
+                style={{ pointerEvents: "none" }}
+              />
+            )}
 
             {docks.map((dock) => {
               const badge = badgeSize(dock);
@@ -298,6 +354,15 @@ export function MarinaMap({
           </p>
         )}
       </div>
+      </div>
+
+      {selectedSlip && (
+        <SlipPanel
+          slip={selectedSlip}
+          dockName={selectedDock?.name ?? ""}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </div>
   );
 }

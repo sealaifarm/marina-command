@@ -30,7 +30,7 @@ export default async function MarinaMapPage() {
       <h2 className="text-3xl font-semibold tracking-tight">{marina.name}</h2>
       <p className="mt-2 mb-6 text-muted-foreground">
         {map.slips.length} {map.slips.length === 1 ? "slip" : "slips"} on {map.docks.length}{" "}
-        {map.docks.length === 1 ? "dock" : "docks"}. Hover a slip for its details.
+        {map.docks.length === 1 ? "dock" : "docks"}. Click a slip to see its details.
       </p>
       <MarinaMap marinaName={marina.name} {...map} />
     </div>

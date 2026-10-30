@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { MARINA_COOKIE } from "@/lib/preferences";
+import type { MapBoat } from "@/components/marina-map/marina-map";
 import { createClient } from "./server";
 
 // Per-request helpers for Server Components. React's cache() makes each one run
@@ -8,7 +9,7 @@ import { createClient } from "./server";
 // without repeating the Supabase round trip.
 
 // One Supabase client per request.
-const getClient = cache(createClient);
+export const getClient = cache(createClient);
 
 // The signed-in user, or null. Reads the verified token claims instead of
 // calling Supabase Auth (see the note in ./proxy.ts).
@@ -44,7 +45,7 @@ export const getSelectedMarina = cache(async () => {
 // marinas this user belongs to.
 export const getMarinaMap = cache(async (marinaId: string) => {
   const supabase = await getClient();
-  const [layoutRes, docksRes, slipsRes] = await Promise.all([
+  const [layoutRes, docksRes, slipsRes, boatsRes] = await Promise.all([
     supabase.from("map_layouts").select("width, height").eq("marina_id", marinaId).maybeSingle(),
     supabase
       .from("docks")
@@ -56,6 +57,11 @@ export const getMarinaMap = cache(async (marinaId: string) => {
       .select("id, dock_id, name, length, width, status, map_x, map_y, rotation")
       .eq("marina_id", marinaId)
       .order("name"),
+    supabase
+      .from("boats")
+      .select("slip_id, name, type, length, registration, owner_name, owner_phone, owner_email")
+      .eq("marina_id", marinaId)
+      .not("slip_id", "is", null),
   ]);
 
   if (layoutRes.error || docksRes.error || slipsRes.error) return null;
@@ -73,6 +79,20 @@ export const getMarinaMap = cache(async (marinaId: string) => {
     map_y: Number(d.map_y),
     rotation: Number(d.rotation),
   }));
+  // The map still works if the boats table isn't there yet (migration not run): no vessels show.
+  const boatBySlip = new Map<string, MapBoat>();
+  for (const b of boatsRes.error ? [] : (boatsRes.data ?? [])) {
+    boatBySlip.set(String(b.slip_id), {
+      name: String(b.name),
+      type: b.type ?? null,
+      length: b.length === null || b.length === undefined ? null : Number(b.length),
+      registration: b.registration ?? null,
+      owner_name: String(b.owner_name),
+      owner_phone: b.owner_phone ?? null,
+      owner_email: b.owner_email ?? null,
+    });
+  }
+
   const slips = (slipsRes.data ?? []).map((s) => ({
     id: String(s.id),
     dock_id: String(s.dock_id),
@@ -83,6 +103,7 @@ export const getMarinaMap = cache(async (marinaId: string) => {
     map_x: Number(s.map_x),
     map_y: Number(s.map_y),
     rotation: Number(s.rotation),
+    boat: boatBySlip.get(String(s.id)) ?? null,
   }));
 
   return { layout, docks, slips };
